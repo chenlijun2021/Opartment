@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字蒲公英 - 极境艺术版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400&family=Plus+Jakarta+Sans:wght@200;300;400&display=swap');
+        body { 
+            margin: 0; padding: 0; overflow: hidden; 
+            background-color: #030508; 
+            font-family: 'Plus Jakarta Sans', 'Noto Serif SC', sans-serif; 
+            user-select: none;
+        }
+        canvas { display: block; }
+        
+        .ui-panel {
+            position: absolute; top: 25px; left: 25px; z-index: 100;
+            background: rgba(4, 7, 12, 0.45); backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08); padding: 26px;
+            border-radius: 24px; color: #f1f5f9; width: 340px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            transform-origin: top left;
+        }
+        .ui-panel.collapsed {
+            width: 54px; height: 54px; padding: 15px; overflow: hidden;
+            background: rgba(4, 7, 12, 0.85); border-radius: 18px;
+        }
+        .ui-content { transition: opacity 0.3s, transform 0.3s; opacity: 1; }
+        .collapsed .ui-content { opacity: 0; transform: scale(0.9); pointer-events: none; }
+
+        .toggle-btn {
+            position: absolute; right: 15px; top: 15px; cursor: pointer;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; background: rgba(255,255,255,0.05); transition: 0.3s;
+        }
+        .toggle-btn:hover { background: rgba(255,255,255,0.15); }
+
+        label { 
+            font-size: 0.58rem; text-transform: uppercase; 
+            letter-spacing: 2px; color: rgba(255,255,255,0.5); 
+            display: block; margin-bottom: 8px; font-weight: 600;
+        }
+        .control-group { margin-bottom: 16px; }
+        
+        input[type="color"] {
+            appearance: none; border: none; width: 28px; height: 28px; cursor: pointer; 
+            background: none; border-radius: 50%; overflow: hidden;
+        }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+        
+        input[type=range] { width: 100%; height: 3px; background: rgba(255,255,255,0.15); appearance: none; outline: none; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
+
+        .custom-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 11px 16px; border-radius: 12px; width: 100%;
+            font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+            transition: all 0.3s; color: #fff; font-weight: 600;
+            cursor: pointer;
+        }
+        .custom-btn:hover {
+            background: #fff; color: #000; box-shadow: 0 10px 20px rgba(255,255,255,0.2);
+        }
+        .custom-input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 10px 12px; width: 100%;
+            color: #fff; font-size: 12px; outline: none;
+            transition: 0.3s; letter-spacing: 1px;
+        }
+        .custom-input:focus {
+            border-color: rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="mainPanel" class="ui-panel">
+        <div class="toggle-btn" onclick="toggleUI()">
+            <svg class="text-white/60" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+        </div>
+
+        <div class="ui-content">
+            <div class="text-[9px] font-semibold mb-6 tracking-[0.4em] opacity-50 flex items-center gap-2">
+                <span>DANDELION ULTIMATE V14</span>
+                <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+            </div>
+            
+            <div class="control-group">
+                <button id="actionBtn" class="custom-btn" onclick="toggleInteraction()">轻拂微风</button>
+            </div>
+
+            <div class="control-group">
+                <label>诗意留白 (用空格分隔行)</label>
+                <input type="text" id="targetTextInput" class="custom-input" value="把自由藏进种子 托付给风 所到之处 皆为家">
+            </div>
+
+            <!-- 色彩控制矩阵 -->
+            <div class="grid grid-cols-3 gap-2 control-group">
+                <div>
+                    <label>背景</label>
+                    <input type="color" id="skyColor" value="#2a4b7c">
+                </div>
+                <div>
+                    <label>飞絮</label>
+                    <input type="color" id="dandColor" value="#ffffff">
+                </div>
+                <div>
+                    <label>根茎</label>
+                    <input type="color" id="stemColor" value="#ffffff">
+                </div>
+            </div>
+
+            <!-- 排版与景深 -->
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div>
+                    <label>中文字号 (Size)</label>
+                    <input type="range" id="fontSizeRange" min="16" max="60" value="28">
+                </div>
+                <div>
+                    <label>花絮差异 (Var)</label>
+                    <input type="range" id="varianceRange" min="0" max="80" value="35">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div>
+                    <label>行距 (Line)</label>
+                    <input type="range" id="lineSpacingRange" min="1.0" max="3.0" step="0.1" value="1.6">
+                </div>
+                <div>
+                    <label>字距 (Spacing)</label>
+                    <input type="range" id="letterSpacingRange" min="0.8" max="2.0" step="0.05" value="1.15">
+                </div>
+            </div>
+
+            <!-- 新增：根茎透明度与幻化速度调节 -->
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div>
+                    <label>根茎不透明度</label>
+                    <input type="range" id="stemAlphaRange" min="5" max="100" value="65">
+                </div>
+                <div>
+                    <label>幻化速度</label>
+                    <input type="range" id="morphRateRange" min="5" max="30" value="15">
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-white/10 text-[9px] text-white/40 leading-relaxed uppercase tracking-[0.25em] text-center italic">
+                Arcing Flights & Fluid Dynamics
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let seeds = [];
+        const numSeeds = 380; 
+        
+        const rawGreetings = [
+            "侬好！Ô", "안녕하세요!Ô", "Bonjour !Ô", "Hello!Ô", "สวัสดี!Ô", 
+            "こんにちは！Ô", "Halo!Ô", "Здравствуйте!Ô", "¡Hola!Ô"
+        ];
+        const subGreetingLines = [
+            "侬好！Ô   안녕하세요!Ô",
+            "Bonjour !Ô  Hello!Ô",
+            "สวัสดี!Ô   こんにちは！Ô  Halo!Ô",
+            "Здравствуйте!Ô  ¡Hola!Ô"
+        ];
+        
+        let greetingChars = [];
+        let headPos, stemBase;
+        
+        let skyPicker, dandPicker, stemPicker;
+        let textInput, fontSizeRange, lineSpacingRange, letterSpacingRange, varianceRange, stemAlphaRange, morphRateRange, actionBtn;
+        
+        const G_STUCK = 0;
+        const G_FLY_OUT = 1; 
+        const G_ASSEMBLE = 2; 
+        const G_TEXT = 3;     
+        const G_FLY_BACK = 4; 
+        
+        let globalState = G_STUCK; 
+        let stateTimer = 0;
+        let targetLayout = [];
+
+        function toggleUI() {
+            document.getElementById('mainPanel').classList.toggle('collapsed');
+        }
+
+        function segmentString(str) {
+            let result = [];
+            try {
+                if (window.Intl && Intl.Segmenter) {
+                    let segmenter = new Intl.Segmenter(undefined, {granularity: 'grapheme'});
+                    for (let {segment} of segmenter.segment(str)) {
+                        result.push(segment);
+                    }
+                    return result;
+                }
+            } catch(e) {}
+            return str.split('');
+        }
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            colorMode(HSB, 360, 100, 100, 1);
+            
+            skyPicker = document.getElementById('skyColor');
+            dandPicker = document.getElementById('dandColor');
+            stemPicker = document.getElementById('stemColor');
+            
+            textInput = document.getElementById('targetTextInput');
+            fontSizeRange = document.getElementById('fontSizeRange');
+            lineSpacingRange = document.getElementById('lineSpacingRange');
+            letterSpacingRange = document.getElementById('letterSpacingRange');
+            varianceRange = document.getElementById('varianceRange');
+            stemAlphaRange = document.getElementById('stemAlphaRange');
+            morphRateRange = document.getElementById('morphRateRange');
+            actionBtn = document.getElementById('actionBtn');
+
+            // 监听UI参数，实时触发布局重新计算
+            const updateLayoutIfText = () => {
+                if (globalState === G_TEXT || globalState === G_ASSEMBLE) {
+                    calculateTextTargets();
+                }
+            };
+            textInput.addEventListener('input', updateLayoutIfText);
+            fontSizeRange.addEventListener('input', updateLayoutIfText);
+            lineSpacingRange.addEventListener('input', updateLayoutIfText);
+            letterSpacingRange.addEventListener('input', updateLayoutIfText);
+
+            headPos = createVector(width / 2, height * 0.45);
+            stemBase = createVector(width / 2, height + 150); 
+
+            for (let g of rawGreetings) {
+                let segments = segmentString(g);
+                for (let char of segments) {
+                    if (char.trim() !== "") greetingChars.push(char);
+                }
+            }
+
+            for (let i = 0; i < numSeeds; i++) {
+                let phi = acos(1 - 2 * (i + 0.5) / numSeeds);
+                let theta = PI * (1 + sqrt(5)) * (i + 0.5);
+                seeds.push(new Seed(phi, theta, i));
+            }
+        }
+
+        class Seed {
+            constructor(phi, theta, index) {
+                this.phi = phi;
+                this.theta = theta;
+                this.index = index;
+                
+                this.dirX = sin(phi) * cos(theta);
+                this.dirY = sin(phi) * sin(theta);
+                this.dirZ = cos(phi);
+                
+                this.noiseSeed = random(10000);
+                this.baseChar = greetingChars[index % greetingChars.length];
+                
+                // 景深权重系统：使得在 UI 调节时能产生极大的花絮层次跨度
+                let sizeRand = random();
+                if (sizeRand > 0.85) {
+                    this.sizeWeight = random(0.8, 1.6); // 前景特大颗粒
+                } else if (sizeRand > 0.4) {
+                    this.sizeWeight = random(0.1, 0.4); // 中景主体
+                } else {
+                    this.sizeWeight = random(-0.6, -0.1); // 背景极小光尘
+                }
+                
+                this.pos = createVector(0, 0); 
+                this.vel = createVector(0, 0);
+                this.acc = createVector(0, 0);
+                
+                this.breatheOffset = random(TWO_PI);
+                this.maxFlightSpeed = map(noise(this.index * 0.1), 0, 1, 4, 15); 
+                this.curveDir = random() > 0.5 ? 1 : -1;
+                this.localState = 'STUCK'; 
+                
+                this.morphProgress = 0; 
+                this.renderAngle = 0;
+                this.alphaMultiplier = 1.0;
+                this.burstTimer = 0;
+            }
+
+            gentlePush(forceMult) {
+                let angle = random(TWO_PI);
+                // 优化风力：让飘散距离更开阔，时间更悠长
+                let r = random(5.0, 12.0) * forceMult;
+                let vx = cos(angle) * r;
+                let vy = sin(angle) * r - 3.5; 
+                this.vel.set(vx, vy);
+            }
+
+            // 抛物线柔性绕飞寻路系统
+            arrive(tx, ty, slowRadius) {
+                let desired = createVector(tx - this.pos.x, ty - this.pos.y);
+                let d = desired.mag();
+
+                if (d > 0) {
+                    desired.normalize();
+                    
+                    // 引入抛物切向回旋力
+                    let tangent = createVector(-desired.y, desired.x).mult(this.curveDir);
+                    // 距离远时增加绕弧度，临近时拉直，保证弧线柔和绝不生硬掉头
+                    let curveAmount = map(d, slowRadius * 0.4, 1000, 0, 3.8, true); 
+                    desired.add(p5.Vector.mult(tangent, curveAmount));
+                    desired.normalize();
+
+                    let speed = this.maxFlightSpeed;
+                    if (d < slowRadius) {
+                        speed = map(d, 0, slowRadius, 0.15, this.maxFlightSpeed);
+                    }
+                    desired.mult(speed);
+
+                    let steer = p5.Vector.sub(desired, this.vel);
+                    // 限制极限转向力，增加悠长弧线惯性
+                    let maxForce = map(d, 0, 400, 0.15, 0.035, true); 
+                    steer.limit(maxForce);
+                    
+                    this.acc.add(steer);
+                }
+                return d; 
+            }
+
+            applyQuietDrift() {
+                let angle = noise(this.pos.x * 0.002, this.pos.y * 0.002, frameCount * 0.0015) * TWO_PI * 2;
+                this.acc.x += cos(angle) * 0.06;
+                this.acc.y += sin(angle) * 0.06;
+                
+                // 软边界保护，让花絮在宽广区域里柔美舞动而不会飘散到屏幕外
+                let cx = width / 2;
+                let cy = height * 0.45;
+                let dx = cx - this.pos.x;
+                let dy = cy - this.pos.y;
+                let dCenter = sqrt(dx*dx + dy*dy);
+                
+                let boundary = min(width, height) * 0.55; 
+                if (dCenter > boundary) {
+                    let pushBackX = (dx / dCenter) * 0.04;
+                    let pushBackY = (dy / dCenter) * 0.04;
+                    this.acc.x += pushBackX;
+                    this.acc.y += pushBackY;
+                }
+            }
+
+            update(hPos) {
+                let breatheRadius = map(sin(frameCount * 0.01 + this.breatheOffset), -1, 1, 90, 130);
+                let jitterX = (noise(frameCount * 0.001 + this.noiseSeed) - 0.5) * 5;
+                let jitterY = (noise(frameCount * 0.001 + this.noiseSeed + 100) - 0.5) * 5;
+
+                let anchorX = hPos.x + this.dirX * breatheRadius + jitterX;
+                let anchorY = hPos.y + this.dirY * breatheRadius + jitterY;
+                let normalAngle = atan2(anchorY - hPos.y, anchorX - hPos.x) + PI / 2;
+
+                // 幻化速度因子（通过 UI 动态调整变化快慢）
+                let morphStep = parseFloat(morphRateRange.value) / 1000.0;
+
+                if (this.localState === 'STUCK') {
+                    this.pos.x = lerp(this.pos.x, anchorX, 0.1);
+                    this.pos.y = lerp(this.pos.y, anchorY, 0.1);
+                    this.vel.mult(0.5); 
+                    this.renderAngle = this.lerpAngle(this.renderAngle, normalAngle, 0.1);
+                    this.morphProgress = 0; 
+                    this.alphaMultiplier = map(this.dirZ, -1, 1, 0.25, 1.0);
+                } 
+                else if (this.localState === 'FLY') {
+                    this.applyQuietDrift();
+                    this.renderAngle = this.lerpAngle(this.renderAngle, 0, 0.01);
+                    this.alphaMultiplier = map(this.dirZ, -1, 1, 0.3, 1.0);
+                }
+                else if (this.localState === 'SEEK_TEXT') {
+                    if (this.index < targetLayout.length) {
+                        let tObj = targetLayout[this.index];
+                        let dynX = tObj.x + (noise(frameCount * 0.003 + this.noiseSeed) - 0.5) * 6;
+                        let dynY = tObj.y + (noise(frameCount * 0.003 + this.noiseSeed + 100) - 0.5) * 6;
+                        
+                        let dist = this.arrive(dynX, dynY, 250);
+                        this.renderAngle = this.lerpAngle(this.renderAngle, tObj.rot || 0, 0.03);
+                        this.alphaMultiplier = 1.0;
+
+                        if (dist < 6) {
+                            this.localState = 'MORPH_IN';
+                            this.vel.mult(0.8);
+                        }
+                    } else {
+                        this.applyQuietDrift();
+                        this.alphaMultiplier = lerp(this.alphaMultiplier, 0, 0.015);
+                    }
+                }
+                else if (this.localState === 'MORPH_IN') {
+                    let tObj = targetLayout[this.index];
+                    this.pos.x = lerp(this.pos.x, tObj.x, 0.1);
+                    this.pos.y = lerp(this.pos.y, tObj.y, 0.1);
+                    this.renderAngle = tObj.rot || 0;
+                    this.morphProgress += morphStep; 
+                    if (this.morphProgress >= 1.0) {
+                        this.morphProgress = 1.0;
+                        this.localState = 'TEXT';
+                    }
+                }
+                else if (this.localState === 'TEXT') {
+                    let tObj = targetLayout[this.index];
+                    let dynX = tObj.x + (noise(frameCount * 0.002 + this.noiseSeed) - 0.5) * 4;
+                    let dynY = tObj.y + (noise(frameCount * 0.002 + this.noiseSeed + 100) - 0.5) * 4;
+                    
+                    this.pos.x = lerp(this.pos.x, dynX, 0.06);
+                    this.pos.y = lerp(this.pos.y, dynY, 0.06);
+                    this.vel.mult(0);
+                    this.renderAngle = tObj.rot || 0;
+                    this.morphProgress = 1.0;
+                    this.alphaMultiplier = 1.0;
+                }
+                else if (this.localState === 'MORPH_OUT') {
+                    this.applyQuietDrift();
+                    this.morphProgress -= morphStep; 
+                    this.renderAngle += this.curveDir * 0.015; 
+                    
+                    if (this.morphProgress <= 0) {
+                        this.morphProgress = 0;
+                        this.localState = 'SEEK_HOME';
+                    }
+                }
+                else if (this.localState === 'BURST_OUT') {
+                    this.applyQuietDrift();
+                    this.renderAngle += this.curveDir * 0.02;
+                    this.alphaMultiplier = lerp(this.alphaMultiplier, map(this.dirZ, -1, 1, 0.25, 1.0), 0.03);
+                    
+                    this.burstTimer++;
+                    if (this.burstTimer > 100) { 
+                        this.localState = 'SEEK_HOME';
+                    }
+                }
+                else if (this.localState === 'SEEK_HOME') {
+                    let dist = this.arrive(anchorX, anchorY, 200);
+                    if (dist < 50) {
+                        this.renderAngle = this.lerpAngle(this.renderAngle, normalAngle, 0.04);
+                    }
+                    this.alphaMultiplier = lerp(this.alphaMultiplier, map(this.dirZ, -1, 1, 0.25, 1.0), 0.04);
+
+                    if (dist < 4) {
+                        this.localState = 'STUCK';
+                    }
+                }
+
+                if (this.localState !== 'STUCK' && this.localState !== 'TEXT' && this.localState !== 'MORPH_IN') {
+                    this.vel.add(this.acc);
+                    this.vel.mult(0.955); 
+                    this.pos.add(this.vel);
+                    this.acc.set(0, 0);
+                }
+            }
+
+            lerpAngle(current, target, step) {
+                let diff = target - current;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                return current + diff * step;
+            }
+
+            render() {
+                if (this.alphaMultiplier < 0.01) return; 
+                
+                let zScale = map(this.dirZ, -1, 1, 0.6, 1.4);
+                let c = color(dandPicker.value);
+                let h = hue(c), s = saturation(c), b = brightness(c);
+                
+                push();
+                translate(this.pos.x, this.pos.y);
+                rotate(this.renderAngle);
+
+                // 外文花絮图层
+                if (this.morphProgress < 1.0) {
+                    let outAlpha = (1.0 - this.morphProgress) * this.alphaMultiplier;
+                    let outScale = 1.0 + this.morphProgress * 0.4; 
+                    
+                    let variance = parseFloat(varianceRange.value);
+                    let actualBaseSize = 14 + this.sizeWeight * variance;
+                    actualBaseSize = max(3, actualBaseSize); 
+                    
+                    push();
+                    scale(outScale);
+                    rotate(this.morphProgress * PI * 0.2);
+                    
+                    textFont('Plus Jakarta Sans');
+                    textSize(actualBaseSize * zScale);
+                    fill(h, s, b, outAlpha);
+                    noStroke();
+                    textAlign(CENTER, CENTER);
+                    text(this.baseChar, 0, 0);
+                    pop();
+                }
+
+                // 中文诗句/排版图层
+                if (this.morphProgress > 0.0 && this.index < targetLayout.length) {
+                    let inAlpha = this.morphProgress * this.alphaMultiplier;
+                    let inScale = 0.6 + this.morphProgress * 0.4;
+                    let tObj = targetLayout[this.index];
+                    
+                    push();
+                    scale(inScale);
+                    rotate((1.0 - this.morphProgress) * -PI * 0.2);
+                    
+                    if (tObj.type === 'CHINESE') {
+                        textFont('Noto Serif SC');
+                        textSize(parseFloat(fontSizeRange.value));
+                        fill(h, s * 0.1, b * 1.2, inAlpha); 
+                    } else {
+                        textFont('Plus Jakarta Sans');
+                        textSize(13); 
+                        fill(h, s, b * 0.9, inAlpha * 0.5); 
+                    }
+                    
+                    noStroke();
+                    textAlign(CENTER, CENTER);
+                    text(tObj.char, 0, 0);
+                    pop();
+                }
+
+                pop();
+            }
+        }
+
+        function draw() {
+            background(skyPicker.value);
+
+            let time = frameCount * 0.0025;
+            let nxHead = (noise(time) - 0.5) * 100;
+            let nyHead = (noise(time + 66) - 0.5) * 20;
+            let nxRoot = (noise(time + 100) - 0.5) * 40; 
+
+            headPos.x = lerp(headPos.x, width / 2 + nxHead, 0.04);
+            headPos.y = lerp(headPos.y, height * 0.45 + nyHead, 0.04);
+            
+            let currentRootX = width / 2 + nxRoot;
+            stemBase.x = lerp(stemBase.x, currentRootX, 0.04);
+
+            drawArtStem();
+
+            let sortedSeeds = [...seeds].sort((a, b) => a.dirZ - b.dirZ);
+            for (let s of sortedSeeds) {
+                s.update(headPos);
+                s.render();
+            }
+
+            // 漫长飘散 5.5 秒后自动汇聚
+            if (globalState === G_FLY_OUT && millis() - stateTimer > 5500) {
+                globalState = G_ASSEMBLE;
+                calculateTextTargets();
+                
+                for (let s of seeds) {
+                    s.localState = 'SEEK_TEXT';
+                }
+                actionBtn.innerText = "弧线凝结中...";
+            }
+            
+            if (globalState === G_ASSEMBLE) {
+                let allMorphed = true;
+                for (let i = 0; i < targetLayout.length; i++) {
+                    if (seeds[i].localState !== 'TEXT') {
+                        allMorphed = false;
+                        break;
+                    }
+                }
+                if (allMorphed && millis() - stateTimer > 9500) { 
+                    globalState = G_TEXT;
+                    actionBtn.innerText = "触碰幻灭";
+                }
+            }
+
+            if (globalState === G_FLY_BACK) {
+                let allMorphedOut = true;
+                for (let i = 0; i < targetLayout.length; i++) {
+                    if (seeds[i].localState === 'MORPH_OUT' || seeds[i].localState === 'BURST_OUT') {
+                        allMorphedOut = false;
+                        break;
+                    }
+                }
+                
+                if (allMorphedOut) {
+                    actionBtn.innerText = "柔美归林...";
+                    let allHome = true;
+                    for (let s of seeds) {
+                        if (s.localState !== 'STUCK') {
+                            allHome = false;
+                            break;
+                        }
+                    }
+                    if (allHome && millis() - stateTimer > 4000) {
+                        globalState = G_STUCK;
+                        actionBtn.innerText = "轻拂微风";
+                    }
+                }
+            }
+        }
+
+        // 绘制柔韧贝塞尔曲线根茎 (支持完全独立的色彩与透明度调节)
+        function drawArtStem() {
+            let stemCol = color(stemPicker.value);
+            let sH = hue(stemCol);
+            let sS = saturation(stemCol);
+            let sB = brightness(stemCol);
+            let sAlpha = parseFloat(stemAlphaRange.value) / 100.0;
+
+            noFill();
+            stroke(sH, sS, sB, sAlpha); 
+            strokeWeight(1.5); 
+            strokeCap(ROUND);
+
+            let midX = lerp(stemBase.x, headPos.x, 0.3) - (headPos.x - stemBase.x) * 0.15; 
+            let midY = lerp(stemBase.y, headPos.y, 0.6);
+
+            beginShape();
+            vertex(stemBase.x, stemBase.y);
+            quadraticVertex(midX, midY, headPos.x, headPos.y);
+            endShape();
+            
+            // 顶端花托颜色与色彩透明度同步
+            fill(sH, sS, sB * 0.6, sAlpha);
+            noStroke();
+            ellipse(headPos.x, headPos.y, 11, 7);
+        }
+
+        function toggleInteraction() {
+            if (globalState === G_STUCK) {
+                globalState = G_FLY_OUT;
+                stateTimer = millis();
+                actionBtn.innerText = "漫天飞舞...";
+                
+                for (let s of seeds) {
+                    s.localState = 'FLY';
+                    s.gentlePush(1.0);
+                }
+            } 
+            else if (globalState === G_TEXT || globalState === G_ASSEMBLE) {
+                globalState = G_FLY_BACK;
+                stateTimer = millis();
+                actionBtn.innerText = "粒子散出...";
+                
+                for (let s of seeds) {
+                    if (s.index < targetLayout.length) {
+                        s.localState = 'MORPH_OUT';
+                        s.gentlePush(1.0); 
+                    } else {
+                        s.localState = 'BURST_OUT';
+                        s.burstTimer = 0;
+                        
+                        let rIdx = floor(random(targetLayout.length));
+                        let tOrigin = targetLayout[rIdx];
+                        
+                        s.pos.x = tOrigin.x + random(-10, 10);
+                        s.pos.y = tOrigin.y + random(-10, 10);
+                        s.alphaMultiplier = 0; 
+                        
+                        s.gentlePush(1.2);
+                    }
+                }
+            }
+        }
+
+        // 自然手工排版引擎
+        function calculateTextTargets() {
+            targetLayout = [];
+            
+            let rawChinese = textInput.value.trim();
+            if (rawChinese.length === 0) rawChinese = "把自由藏进种子 托付给风 所到之处 皆为家";
+            
+            let cSize = parseFloat(fontSizeRange.value);
+            let cLineSpacing = parseFloat(lineSpacingRange.value);
+            let cLetterSpacing = parseFloat(letterSpacingRange.value);
+
+            let cLines = [];
+            let bestSplit = -1;
+            let minDiff = 9999;
+            for(let i=0; i<rawChinese.length; i++) {
+                if (rawChinese[i].match(/\s|，|,|；|;/)) {
+                    let diff = Math.abs(i - rawChinese.length / 2);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestSplit = i;
+                    }
+                }
+            }
+            if (bestSplit !== -1) {
+                cLines.push(rawChinese.substring(0, bestSplit).trim());
+                cLines.push(rawChinese.substring(bestSplit + 1).trim());
+            } else {
+                let mid = Math.ceil(rawChinese.length / 2);
+                cLines.push(rawChinese.substring(0, mid));
+                cLines.push(rawChinese.substring(mid));
+            }
+
+            let gLineSpacing = 2.0;
+            let gSize = 13;
+            
+            let totalHeight = (cLines.length * cSize * cLineSpacing) + 30 + (subGreetingLines.length * gSize * gLineSpacing);
+            let startY = height * 0.42 - totalHeight / 2 + cSize / 2;
+
+            for (let r = 0; r < cLines.length; r++) {
+                let lineText = cLines[r].replace(/\s+/g, '  '); 
+                let actualLength = 0;
+                for(let char of lineText) { actualLength += (char === ' ' ? 0.4 : 1); }
+                
+                let lineWidth = actualLength * cSize * cLetterSpacing; 
+                let startX = width / 2 - lineWidth / 2 + cSize / 2;
+                let baseY = startY + r * cSize * cLineSpacing;
+                
+                let currentXOffset = 0;
+                for (let c = 0; c < lineText.length; c++) {
+                    let char = lineText[c];
+                    if (char !== ' ') {
+                        let randX = random(-1.2, 1.2);
+                        let randY = random(-1.2, 1.2);
+                        let microRot = random(-0.03, 0.03);
+
+                        targetLayout.push({
+                            type: 'CHINESE',
+                            char: char,
+                            x: startX + currentXOffset + randX,
+                            y: baseY + randY,
+                            rot: microRot
+                        });
+                    }
+                    currentXOffset += (char === ' ' ? cSize * 0.5 : cSize * cLetterSpacing);
+                }
+            }
+
+            let gStartY = startY + (cLines.length * cSize * cLineSpacing) + 20;
+
+            for (let r = 0; r < subGreetingLines.length; r++) {
+                let lineStr = subGreetingLines[r];
+                let segments = segmentString(lineStr);
+                
+                let actualLen = 0;
+                for(let seg of segments) { actualLen += (seg === ' ' ? 0.4 : 1); }
+                
+                let gLineWidth = actualLen * gSize * 1.05;
+                let gStartX = width / 2 - gLineWidth / 2 + gSize / 2;
+                let baseY = gStartY + r * gSize * gLineSpacing;
+                
+                let currentX = 0;
+                for (let seg of segments) {
+                    if (seg !== ' ') {
+                        targetLayout.push({
+                            type: 'GREETING',
+                            char: seg,
+                            x: gStartX + currentX,
+                            y: baseY,
+                            rot: 0
+                        });
+                    }
+                    currentX += (seg === ' ' ? gSize * 0.4 : gSize * 1.05);
+                }
+            }
+        }
+
+        function mousePressed() {
+            if (mouseX < 360 && mouseY < 520 && !document.getElementById('mainPanel').classList.contains('collapsed')) return;
+            toggleInteraction();
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            stemBase.set(width / 2, height + 150);
+            if (globalState === G_TEXT || globalState === G_ASSEMBLE) {
+                calculateTextTargets();
+            }
+        }
+    </script>
+</body>
+</html>
