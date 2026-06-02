@@ -77,6 +77,23 @@
             border-color: rgba(255,255,255,0.4);
             background: rgba(255,255,255,0.1);
         }
+
+        /* 开关美学 */
+        .switch {
+            position: relative; display: inline-block; width: 36px; height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1); transition: .3s; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: rgba(255, 255, 255, 0.25); }
+        input:checked + .slider:before { transform: translateX(16px); }
     </style>
 </head>
 <body>
@@ -91,12 +108,12 @@
 
         <div class="ui-content">
             <div class="text-[9px] font-semibold mb-6 tracking-[0.4em] opacity-50 flex items-center gap-2">
-                <span>DANDELION ULTIMATE V14</span>
+                <span>DANDELION ULTIMATE V16</span>
                 <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
             </div>
             
             <div class="control-group">
-                <button id="actionBtn" class="custom-btn" onclick="toggleInteraction()">轻拂微风</button>
+                <button id="actionBtn" class="custom-btn" onclick="toggleInteraction()">轻拂飞散</button>
             </div>
 
             <div class="control-group">
@@ -105,30 +122,47 @@
             </div>
 
             <!-- 色彩控制矩阵 -->
-            <div class="grid grid-cols-3 gap-2 control-group">
-                <div>
-                    <label>背景</label>
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div class="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span class="text-[9px] text-white/50 uppercase">天空背景</span>
                     <input type="color" id="skyColor" value="#2a4b7c">
                 </div>
-                <div>
-                    <label>飞絮</label>
+                <div class="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span class="text-[9px] text-white/50 uppercase">飞絮色彩</span>
                     <input type="color" id="dandColor" value="#ffffff">
                 </div>
-                <div>
-                    <label>根茎</label>
+            </div>
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div class="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span class="text-[9px] text-white/50 uppercase">根茎色彩</span>
                     <input type="color" id="stemColor" value="#ffffff">
+                </div>
+                <div class="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span class="text-[9px] text-white/50 uppercase">外文色彩</span>
+                    <input type="color" id="subColor" value="#cbe2f7">
                 </div>
             </div>
 
-            <!-- 排版与景深 -->
+            <!-- 排版与字号控制 -->
             <div class="grid grid-cols-2 gap-4 control-group">
                 <div>
                     <label>中文字号 (Size)</label>
                     <input type="range" id="fontSizeRange" min="16" max="60" value="28">
                 </div>
                 <div>
+                    <label>外文字号 (Sub Size)</label>
+                    <input type="range" id="subFontSizeRange" min="4" max="24" value="13">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div>
                     <label>花絮差异 (Var)</label>
                     <input type="range" id="varianceRange" min="0" max="80" value="35">
+                </div>
+                <div>
+                    <label>自然风力 (Wind)</label>
+                    <input type="range" id="windRange" min="5" max="25" value="12">
                 </div>
             </div>
             
@@ -143,15 +177,32 @@
                 </div>
             </div>
 
-            <!-- 新增：根茎透明度与幻化速度调节 -->
+            <!-- 根茎与外文不透明度调节 -->
             <div class="grid grid-cols-2 gap-4 control-group">
                 <div>
                     <label>根茎不透明度</label>
                     <input type="range" id="stemAlphaRange" min="5" max="100" value="65">
                 </div>
                 <div>
+                    <label>外文不透明度</label>
+                    <input type="range" id="subAlphaRange" min="5" max="100" value="50">
+                </div>
+            </div>
+
+            <!-- 幻化速度调节与自发微风开关 -->
+            <div class="grid grid-cols-2 gap-4 control-group">
+                <div>
                     <label>幻化速度</label>
                     <input type="range" id="morphRateRange" min="5" max="30" value="15">
+                </div>
+                <div class="flex flex-col justify-end">
+                    <div class="flex items-center justify-between pb-1">
+                        <span class="text-[9px] font-semibold tracking-[0.1em] opacity-50 uppercase">自发性微风</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoWindSwitch" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -179,9 +230,10 @@
         let greetingChars = [];
         let headPos, stemBase;
         
-        let skyPicker, dandPicker, stemPicker;
-        let textInput, fontSizeRange, lineSpacingRange, letterSpacingRange, varianceRange, stemAlphaRange, morphRateRange, actionBtn;
+        let skyPicker, dandPicker, stemPicker, subColorPicker;
+        let textInput, fontSizeRange, subFontSizeRange, lineSpacingRange, letterSpacingRange, varianceRange, stemAlphaRange, subAlphaRange, morphRateRange, autoWindSwitch, actionBtn;
         
+        // 全局状态机
         const G_STUCK = 0;
         const G_FLY_OUT = 1; 
         const G_ASSEMBLE = 2; 
@@ -191,6 +243,16 @@
         let globalState = G_STUCK; 
         let stateTimer = 0;
         let targetLayout = [];
+
+        // 自发性微风参数
+        let lastAutoGustTime = 0;
+        let autoGustInterval = 4000; 
+
+        // 根茎随风摆动的控制变量
+        let windSwayX = 0; 
+        let windSwayY = 0;
+        let targetWindSwayX = 0;
+        let targetWindSwayY = 0;
 
         function toggleUI() {
             document.getElementById('mainPanel').classList.toggle('collapsed');
@@ -217,14 +279,18 @@
             skyPicker = document.getElementById('skyColor');
             dandPicker = document.getElementById('dandColor');
             stemPicker = document.getElementById('stemColor');
+            subColorPicker = document.getElementById('subColor');
             
             textInput = document.getElementById('targetTextInput');
             fontSizeRange = document.getElementById('fontSizeRange');
+            subFontSizeRange = document.getElementById('subFontSizeRange');
             lineSpacingRange = document.getElementById('lineSpacingRange');
             letterSpacingRange = document.getElementById('letterSpacingRange');
             varianceRange = document.getElementById('varianceRange');
             stemAlphaRange = document.getElementById('stemAlphaRange');
+            subAlphaRange = document.getElementById('subAlphaRange');
             morphRateRange = document.getElementById('morphRateRange');
+            autoWindSwitch = document.getElementById('autoWindSwitch');
             actionBtn = document.getElementById('actionBtn');
 
             // 监听UI参数，实时触发布局重新计算
@@ -235,6 +301,7 @@
             };
             textInput.addEventListener('input', updateLayoutIfText);
             fontSizeRange.addEventListener('input', updateLayoutIfText);
+            subFontSizeRange.addEventListener('input', updateLayoutIfText);
             lineSpacingRange.addEventListener('input', updateLayoutIfText);
             letterSpacingRange.addEventListener('input', updateLayoutIfText);
 
@@ -268,10 +335,10 @@
                 this.noiseSeed = random(10000);
                 this.baseChar = greetingChars[index % greetingChars.length];
                 
-                // 景深权重系统：使得在 UI 调节时能产生极大的花絮层次跨度
+                // 景深大小权重
                 let sizeRand = random();
                 if (sizeRand > 0.85) {
-                    this.sizeWeight = random(0.8, 1.6); // 前景特大颗粒
+                    this.sizeWeight = random(0.8, 1.6); // 前景大颗粒
                 } else if (sizeRand > 0.4) {
                     this.sizeWeight = random(0.1, 0.4); // 中景主体
                 } else {
@@ -291,18 +358,27 @@
                 this.renderAngle = 0;
                 this.alphaMultiplier = 1.0;
                 this.burstTimer = 0;
+
+                this.autoFlyDuration = 0;
+                this.autoFlyMaxTime = random(200, 350); 
             }
 
             gentlePush(forceMult) {
                 let angle = random(TWO_PI);
-                // 优化风力：让飘散距离更开阔，时间更悠长
                 let r = random(5.0, 12.0) * forceMult;
                 let vx = cos(angle) * r;
                 let vy = sin(angle) * r - 3.5; 
                 this.vel.set(vx, vy);
             }
 
-            // 抛物线柔性绕飞寻路系统
+            gentleAutoPush() {
+                let angle = random(-PI/2, 0); 
+                let r = random(2.5, 6.0);
+                let vx = cos(angle) * r;
+                let vy = sin(angle) * r - 1.5;
+                this.vel.set(vx, vy);
+            }
+
             arrive(tx, ty, slowRadius) {
                 let desired = createVector(tx - this.pos.x, ty - this.pos.y);
                 let d = desired.mag();
@@ -310,9 +386,7 @@
                 if (d > 0) {
                     desired.normalize();
                     
-                    // 引入抛物切向回旋力
                     let tangent = createVector(-desired.y, desired.x).mult(this.curveDir);
-                    // 距离远时增加绕弧度，临近时拉直，保证弧线柔和绝不生硬掉头
                     let curveAmount = map(d, slowRadius * 0.4, 1000, 0, 3.8, true); 
                     desired.add(p5.Vector.mult(tangent, curveAmount));
                     desired.normalize();
@@ -324,7 +398,6 @@
                     desired.mult(speed);
 
                     let steer = p5.Vector.sub(desired, this.vel);
-                    // 限制极限转向力，增加悠长弧线惯性
                     let maxForce = map(d, 0, 400, 0.15, 0.035, true); 
                     steer.limit(maxForce);
                     
@@ -338,7 +411,6 @@
                 this.acc.x += cos(angle) * 0.06;
                 this.acc.y += sin(angle) * 0.06;
                 
-                // 软边界保护，让花絮在宽广区域里柔美舞动而不会飘散到屏幕外
                 let cx = width / 2;
                 let cy = height * 0.45;
                 let dx = cx - this.pos.x;
@@ -363,7 +435,6 @@
                 let anchorY = hPos.y + this.dirY * breatheRadius + jitterY;
                 let normalAngle = atan2(anchorY - hPos.y, anchorX - hPos.x) + PI / 2;
 
-                // 幻化速度因子（通过 UI 动态调整变化快慢）
                 let morphStep = parseFloat(morphRateRange.value) / 1000.0;
 
                 if (this.localState === 'STUCK') {
@@ -378,6 +449,27 @@
                     this.applyQuietDrift();
                     this.renderAngle = this.lerpAngle(this.renderAngle, 0, 0.01);
                     this.alphaMultiplier = map(this.dirZ, -1, 1, 0.3, 1.0);
+                }
+                else if (this.localState === 'AUTO_FLY') {
+                    this.applyQuietDrift();
+                    this.renderAngle = this.lerpAngle(this.renderAngle, 0, 0.01);
+                    this.alphaMultiplier = map(this.dirZ, -1, 1, 0.3, 1.0);
+
+                    this.autoFlyDuration++;
+                    if (this.autoFlyDuration > this.autoFlyMaxTime) {
+                        this.localState = 'AUTO_RETURN';
+                    }
+                }
+                else if (this.localState === 'AUTO_RETURN') {
+                    let dist = this.arrive(anchorX, anchorY, 200);
+                    if (dist < 50) {
+                        this.renderAngle = this.lerpAngle(this.renderAngle, normalAngle, 0.04);
+                    }
+                    this.alphaMultiplier = lerp(this.alphaMultiplier, map(this.dirZ, -1, 1, 0.25, 1.0), 0.04);
+
+                    if (dist < 4) {
+                        this.localState = 'STUCK';
+                    }
                 }
                 else if (this.localState === 'SEEK_TEXT') {
                     if (this.index < targetLayout.length) {
@@ -516,9 +608,15 @@
                         textSize(parseFloat(fontSizeRange.value));
                         fill(h, s * 0.1, b * 1.2, inAlpha); 
                     } else {
+                        let subCol = color(subColorPicker.value);
+                        let sH = hue(subCol);
+                        let sS = saturation(subCol);
+                        let sB = brightness(subCol);
+                        let sAlpha = (parseFloat(subAlphaRange.value) / 100.0) * inAlpha;
+
                         textFont('Plus Jakarta Sans');
-                        textSize(13); 
-                        fill(h, s, b * 0.9, inAlpha * 0.5); 
+                        textSize(parseFloat(subFontSizeRange.value)); 
+                        fill(sH, sS, sB, sAlpha); 
                     }
                     
                     noStroke();
@@ -535,17 +633,55 @@
             background(skyPicker.value);
 
             let time = frameCount * 0.0025;
-            let nxHead = (noise(time) - 0.5) * 100;
-            let nyHead = (noise(time + 66) - 0.5) * 20;
-            let nxRoot = (noise(time + 100) - 0.5) * 40; 
-
-            headPos.x = lerp(headPos.x, width / 2 + nxHead, 0.04);
-            headPos.y = lerp(headPos.y, height * 0.45 + nyHead, 0.04);
             
+            // 动态物理风力计算 (自然微风 + 交互阵风联合影响)
+            let rawSwayX = (noise(time) - 0.5) * 100;
+            let rawSwayY = (noise(time + 66) - 0.5) * 20;
+
+            if (globalState === G_FLY_OUT) {
+                targetWindSwayX = map(noise(frameCount * 0.05), 0, 1, 80, 140);
+                targetWindSwayY = map(noise(frameCount * 0.05 + 22), 0, 1, -10, -25);
+            } else {
+                targetWindSwayX = lerp(targetWindSwayX, 0, 0.03);
+                targetWindSwayY = lerp(targetWindSwayY, 0, 0.03);
+            }
+
+            windSwayX = lerp(windSwayX, targetWindSwayX, 0.06);
+            windSwayY = lerp(windSwayY, targetWindSwayY, 0.06);
+
+            headPos.x = lerp(headPos.x, width / 2 + rawSwayX + windSwayX, 0.04);
+            headPos.y = lerp(headPos.y, height * 0.45 + rawSwayY + windSwayY, 0.04);
+            
+            let nxRoot = (noise(time + 100) - 0.5) * 30; 
             let currentRootX = width / 2 + nxRoot;
             stemBase.x = lerp(stemBase.x, currentRootX, 0.04);
 
             drawArtStem();
+
+            // 如果开关开启，则进行自发性微风吹拂处理
+            if (autoWindSwitch.checked && globalState === G_STUCK && millis() - lastAutoGustTime > autoGustInterval) {
+                lastAutoGustTime = millis();
+                let gustStrength = noise(frameCount * 0.05); 
+                if (gustStrength > 0.4) {
+                    let numToBlow = floor(random(3, 9));
+                    let blownCount = 0;
+                    let shuffleIndices = Array.from({length: numSeeds}, (_, i) => i).sort(() => random() - 0.5);
+                    
+                    targetWindSwayX = gustStrength * random(20, 45);
+                    targetWindSwayY = -gustStrength * random(5, 12);
+
+                    for (let idx of shuffleIndices) {
+                        let s = seeds[idx];
+                        if (s.localState === 'STUCK') {
+                            s.localState = 'AUTO_FLY';
+                            s.autoFlyDuration = 0;
+                            s.gentleAutoPush(); 
+                            blownCount++;
+                            if (blownCount >= numToBlow) break;
+                        }
+                    }
+                }
+            }
 
             let sortedSeeds = [...seeds].sort((a, b) => a.dirZ - b.dirZ);
             for (let s of sortedSeeds) {
@@ -591,20 +727,20 @@
                     actionBtn.innerText = "柔美归林...";
                     let allHome = true;
                     for (let s of seeds) {
-                        if (s.localState !== 'STUCK') {
+                        if (s.localState !== 'STUCK' && s.localState !== 'AUTO_FLY' && s.localState !== 'AUTO_RETURN') {
                             allHome = false;
                             break;
                         }
                     }
                     if (allHome && millis() - stateTimer > 4000) {
                         globalState = G_STUCK;
-                        actionBtn.innerText = "轻拂微风";
+                        actionBtn.innerText = "轻拂飞散";
                     }
                 }
             }
         }
 
-        // 绘制柔韧贝塞尔曲线根茎 (支持完全独立的色彩与透明度调节)
+        // 绘制柔韧贝塞尔曲线根茎
         function drawArtStem() {
             let stemCol = color(stemPicker.value);
             let sH = hue(stemCol);
@@ -625,7 +761,6 @@
             quadraticVertex(midX, midY, headPos.x, headPos.y);
             endShape();
             
-            // 顶端花托颜色与色彩透明度同步
             fill(sH, sS, sB * 0.6, sAlpha);
             noStroke();
             ellipse(headPos.x, headPos.y, 11, 7);
@@ -701,7 +836,9 @@
             }
 
             let gLineSpacing = 2.0;
-            let gSize = 13;
+            
+            // 动态计算底部外文的整体高度
+            let gSize = parseFloat(subFontSizeRange.value);
             
             let totalHeight = (cLines.length * cSize * cLineSpacing) + 30 + (subGreetingLines.length * gSize * gLineSpacing);
             let startY = height * 0.42 - totalHeight / 2 + cSize / 2;
@@ -765,7 +902,7 @@
         }
 
         function mousePressed() {
-            if (mouseX < 360 && mouseY < 520 && !document.getElementById('mainPanel').classList.contains('collapsed')) return;
+            if (mouseX < 360 && mouseY * 0.8 < 520 && !document.getElementById('mainPanel').classList.contains('collapsed')) return;
             toggleInteraction();
         }
 
